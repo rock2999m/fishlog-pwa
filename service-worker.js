@@ -1,10 +1,10 @@
 const CACHE_NAME = 'fishlog-cache-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/fishlog-pwa/',
+  '/fishlog-pwa/index.html',
+  '/fishlog-pwa/manifest.json',
+  '/fishlog-pwa/icon-192.png',
+  '/fishlog-pwa/icon-512.png'
   // CSSやJSファイル名もここに追加
 ];
 
