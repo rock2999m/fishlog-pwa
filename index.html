@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>釣果登録ミニアプリ</title>
+  <style>
+    body { font-family: sans-serif; background: #eef7f7; margin: 0; padding: 2em; }
+    form { background: #fff; padding: 1.5em; border-radius: 12px; max-width: 350px; margin: auto; box-shadow: 0 4px 18px #0001; }
+    label { display: block; margin: 0.8em 0 0.2em; }
+    input, select, textarea { width: 100%; font-size: 1em; padding: 0.5em; border-radius: 6px; border: 1px solid #aaa; }
+    button { margin-top: 1.2em; padding: 0.7em 1.5em; font-size: 1em; border-radius: 8px; background: #39c; color: #fff; border: none; }
+    .result { margin: 2em auto; max-width: 350px; background: #fffbe7; padding: 1em; border-radius: 10px; color: #333; }
+  </style>
+  <!-- PWA manifest -->
+   <link rel="manifest" href="manifest.json">
+
+  <!-- iOS向け -->
+   <meta name="apple-mobile-web-app-capable" content="yes">
+   <meta name="apple-mobile-web-app-status-bar-style" content="black">
+   <link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body>
+  <form id="fishForm">
+    <h2>釣果登録</h2>
+    <label for="date">日付</label>
+    <input type="date" id="date" name="date" required value="">
+    <label for="place">場所</label>
+    <input type="text" id="place" name="place" required>
+    <label for="species">魚種</label>
+    <input type="text" id="species" name="species" required>
+    <label for="size">サイズ（cm）</label>
+    <input type="number" id="size" name="size" min="1">
+    <label for="memo">メモ</label>
+    <textarea id="memo" name="memo" rows="2"></textarea>
+    <button type="submit">登録</button>
+  </form>
+  <div class="result" id="result" style="display:none;"></div>
+
+  <script>
+    // 日付を今日に初期化
+    document.getElementById('date').valueAsDate = new Date();
+
+    document.getElementById('fishForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const data = {
+        date: document.getElementById('date').value,
+        place: document.getElementById('place').value,
+        species: document.getElementById('species').value,
+        size: document.getElementById('size').value,
+        memo: document.getElementById('memo').value
+      };
+      // 画面に結果表示（今後はここでGAS連携へ拡張！）
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result').innerHTML =
+        `<b>登録内容：</b><br>` +
+        `日付：${data.date}<br>` +
+        `場所：${data.place}<br>` +
+        `魚種：${data.species}<br>` +
+        `サイズ：${data.size}cm<br>` +
+        `メモ：${data.memo}`;
+      // 開発時用：データ内容をコンソールに出力
+      console.log('釣果データ', data);
+      // フォームリセット
+      this.reset();
+      // 日付を今日に戻す
+      document.getElementById('date').valueAsDate = new Date();
+    });
+  </script>
+</body>
+</html>
