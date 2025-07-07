@@ -38,63 +38,75 @@
   </form>
   <div class="result" id="result" style="display:none;"></div>
 
-  <script>
-    // 日付を今日に初期化
-    document.getElementById('date').valueAsDate = new Date();
+ <script>
+  // 日付を今日に初期化
+  document.getElementById('date').valueAsDate = new Date();
 
-    // 画像プレビュー
-    document.getElementById('photo').addEventListener('change', function(e){
-      const preview = document.getElementById('preview');
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          preview.src = evt.target.result;
-          preview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      } else {
-        preview.src = '';
-        preview.style.display = 'none';
-      }
+  // 画像プレビュー
+  document.getElementById('photo').addEventListener('change', function(e){
+    const preview = document.getElementById('preview');
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        preview.src = evt.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.src = '';
+      preview.style.display = 'none';
+    }
+  });
+
+  document.getElementById('fishForm').addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    // 送信内容をconsoleログ
+    for (let pair of formData.entries()) {
+      console.log(`formData: ${pair[0]} =`, pair[1]);
+    }
+
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwh3NtSWNuj8-xSbTOZTc4Ac7WfKFTn9FPjZ5V2HZuTU4gzWA4u8ate1KsAbcIxDA3sWA/exec"; // ←あなたのGAS URLに差し替えてください
+
+    // ボタンを一時無効化
+    form.querySelector("button[type=submit]").disabled = true;
+
+    // fetch前にデバッグ表示
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('result').textContent = "送信中…";
+
+    fetch(GAS_URL, {
+      method: "POST",
+      body: formData
+    })
+    .then(async res => {
+      let resText = await res.text();
+      let status = res.status;
+      let statusText = res.statusText;
+      let parsed = null;
+      try { parsed = JSON.parse(resText); } catch(e) {}
+      console.log('レスポンスstatus:', status, statusText);
+      console.log('レスポンスbody:', resText);
+
+      // 画面にも詳細表示
+      document.getElementById('result').innerHTML =
+        `<b>HTTPステータス:</b> ${status} ${statusText}<br>` +
+        `<b>レスポンス:</b><br><pre>${resText.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>` +
+        (parsed ? `<b>パース済みJSON:</b><br><pre>${JSON.stringify(parsed, null, 2)}</pre>` : '');
+
+      return res;
+    })
+    .catch(err => {
+      console.error("fetchエラー", err);
+      document.getElementById('result').innerHTML =
+        `<b>送信エラー:</b> ${err}<br><pre>${err.stack}</pre>`;
+    })
+    .finally(() => {
+      form.querySelector("button[type=submit]").disabled = false;
     });
-
-    document.getElementById('fishForm').addEventListener('submit', function(e){
-      e.preventDefault();
-
-      const form = e.target;
-      const formData = new FormData(form);
-
-      // 必要ならここで追加データ加工可能
-      // 例: formData.append('userId', ...);
-
-      // ここにGASのウェブアプリURLを入れてください
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbwh3NtSWNuj8-xSbTOZTc4Ac7WfKFTn9FPjZ5V2HZuTU4gzWA4u8ate1KsAbcIxDA3sWA/exec";
-
-      // ボタンを一時無効化
-      form.querySelector("button[type=submit]").disabled = true;
-
-      fetch(GAS_URL, {
-        method: "POST",
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        // GASから返却された内容を画面に表示
-        document.getElementById('result').style.display = 'block';
-        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-        form.reset();
-        document.getElementById('date').valueAsDate = new Date();
-        document.getElementById('preview').style.display = 'none';
-      })
-      .catch(err => {
-        document.getElementById('result').style.display = 'block';
-        document.getElementById('result').textContent = "送信エラー: " + err;
-      })
-      .finally(() => {
-        form.querySelector("button[type=submit]").disabled = false;
-      });
-    });
-  </script>
-</body>
-</html>
+  });
+</script>
