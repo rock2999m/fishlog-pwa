@@ -1,65 +1,15 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>釣果登録ミニアプリ</title>
-  <style>
-    body { font-family: sans-serif; background: #eef7f7; margin: 0; padding: 2em; }
-    form { background: #fff; padding: 1.5em; border-radius: 12px; max-width: 350px; margin: auto; box-shadow: 0 4px 18px #0001; }
-    label { display: block; margin: 0.8em 0 0.2em; }
-    input, select, textarea { width: 100%; font-size: 1em; padding: 0.5em; border-radius: 6px; border: 1px solid #aaa; }
-    button { margin-top: 1.2em; padding: 0.7em 1.5em; font-size: 1em; border-radius: 8px; background: #39c; color: #fff; border: none; }
-    .img-preview { margin-top: 1em; max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002; }
-    .result { margin: 2em auto; max-width: 350px; background: #fffbe7; padding: 1em; border-radius: 10px; color: #333; }
-  </style>
-  <link rel="manifest" href="/fishlog-pwa/manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="/fishlog-pwa/icon-192.png">
-</head>
-<body>
-  <form id="fishForm" autocomplete="off">
-    <h2>釣果登録</h2>
-    <label for="date">日付</label>
-    <input type="date" id="date" name="date" required>
-    <label for="place">場所</label>
-    <input type="text" id="place" name="place" required>
-    <label for="species">魚種</label>
-    <input type="text" id="species" name="species" required>
-    <label for="size">サイズ（cm）</label>
-    <input type="number" id="size" name="size" min="1">
-    <label for="photo">写真</label>
-    <input type="file" id="photo" name="photo" accept="image/*">
-    <label for="memo">メモ</label>
-    <textarea id="memo" name="memo" rows="2"></textarea>
-    <button type="submit">送信</button>
-    <img id="preview" class="img-preview" style="display:none;" alt="プレビュー">
-  </form>
-  <div class="result" id="result" style="display:none;"></div>
-
- <script>
-  // 日付を今日に初期化
-  document.getElementById('date').valueAsDate = new Date();
-
-  // 画像プレビュー
-  document.getElementById('photo').addEventListener('change', function(e){
-    const preview = document.getElementById('preview');
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        preview.src = evt.target.result;
-        preview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    } else {
-      preview.src = '';
-      preview.style.display = 'none';
-    }
-  });
-
-  document.getElementById('fishForm').addEventListener('submit', function(e){
+<form id="fishForm">
+  <input type="file" id="photo" name=""> <!-- name属性は空 or 削除 -->
+  <input type="text" name="memo">
+  <input type="text" name="species">
+  <input type="text" name="size">
+  <input type="text" name="date">
+  <input type="text" name="place">
+  <button type="submit">送信</button>
+</form>
+<div id="result"></div>
+<script>
+document.getElementById('fishForm').addEventListener('submit', function(e){
   e.preventDefault();
 
   const form = e.target;
@@ -71,47 +21,31 @@
   if (file) {
     const reader = new FileReader();
     reader.onload = function(evt) {
-      // base64の部分だけ抽出
       const base64 = evt.target.result.split(',')[1];
       formData.append('photo_base64', base64);
       formData.append('photo_name', file.name);
+
+      // 確認ログ
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
 
       sendFormData(formData);
     };
     reader.readAsDataURL(file);
   } else {
-    sendFormData(formData); // 写真なしの場合
+    sendFormData(formData);
   }
 
   function sendFormData(fd) {
-    const GAS_URL = "https://script.google.com/macros/s/AKfycby2Hp3ZcykGabspLYwrWMJwA-u_HBAtAiZptWuHanhN0YLp2QKQEn9n8TWfR_-MpuYoTA/exec"; // あなたのGAS URL
-    form.querySelector("button[type=submit]").disabled = true;
-    document.getElementById('result').style.display = 'block';
-    document.getElementById('result').textContent = "送信中…";
-
-    fetch(GAS_URL, {
+    fetch("https://script.google.com/macros/s/XXXXXXXXX/exec", {
       method: "POST",
       body: fd
     })
     .then(async res => {
       let resText = await res.text();
-      let status = res.status;
-      let statusText = res.statusText;
-      let parsed = null;
-      try { parsed = JSON.parse(resText); } catch(e) {}
-      document.getElementById('result').innerHTML =
-        `<b>HTTPステータス:</b> ${status} ${statusText}<br>` +
-        `<b>レスポンス:</b><br><pre>${resText.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>` +
-        (parsed ? `<b>パース済みJSON:</b><br><pre>${JSON.stringify(parsed, null, 2)}</pre>` : '');
-
-      return res;
-    })
-    .catch(err => {
-      document.getElementById('result').innerHTML =
-        `<b>送信エラー:</b> ${err}<br><pre>${err.stack}</pre>`;
-    })
-    .finally(() => {
-      form.querySelector("button[type=submit]").disabled = false;
+      document.getElementById('result').textContent = resText;
     });
   }
 });
+</script>
