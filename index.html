@@ -75,7 +75,7 @@
       }
 
       function sendFormData(fd) {
-        const GAS_URL = "YOUR_GAS_URL_HERE"; // ←あなたのGASウェブアプリURLに置き換えてください
+        const GAS_URL = "https://script.google.com/macros/s/AKfycby2Hp3ZcykGabspLYwrWMJwA-u_HBAtAiZptWuHanhN0YLp2QKQEn9n8TWfR_-MpuYoTA/exec"; // ←あなたのGASウェブアプリURLに置き換えてください
         document.getElementById('result').textContent = '送信中…';
         fetch(GAS_URL, {
           method: "POST",
