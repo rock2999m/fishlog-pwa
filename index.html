@@ -1,51 +1,96 @@
-<form id="fishForm">
-  <input type="file" id="photo" name=""> <!-- name属性は空 or 削除 -->
-  <input type="text" name="memo">
-  <input type="text" name="species">
-  <input type="text" name="size">
-  <input type="text" name="date">
-  <input type="text" name="place">
-  <button type="submit">送信</button>
-</form>
-<div id="result"></div>
-<script>
-document.getElementById('fishForm').addEventListener('submit', function(e){
-  e.preventDefault();
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>GAS base64画像送信テスト</title>
+  <style>
+    body { font-family: sans-serif; }
+    #result { background: #f8f8dd; margin-top: 1em; padding: 1em; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h2>GASにbase64画像＋テキストを送信テスト</h2>
+  <form id="fishForm">
+    <div>
+      <label>写真
+        <input type="file" id="photo" name="">
+      </label>
+    </div>
+    <div>
+      <label>メモ
+        <input type="text" name="memo" value="テスト送信">
+      </label>
+    </div>
+    <div>
+      <label>魚種
+        <input type="text" name="species" value="ひらめ">
+      </label>
+    </div>
+    <div>
+      <label>サイズ
+        <input type="text" name="size" value="60">
+      </label>
+    </div>
+    <div>
+      <label>日付
+        <input type="date" name="date" value="2025-07-07">
+      </label>
+    </div>
+    <div>
+      <label>場所
+        <input type="text" name="place" value="垂水">
+      </label>
+    </div>
+    <button type="submit">送信</button>
+  </form>
+  <div id="result"></div>
 
-  const form = e.target;
-  const formData = new FormData(form);
+  <script>
+    document.getElementById('fishForm').addEventListener('submit', function(e){
+      e.preventDefault();
 
-  const fileInput = document.getElementById('photo');
-  const file = fileInput.files[0];
+      const form = e.target;
+      const formData = new FormData(form);
 
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-      const base64 = evt.target.result.split(',')[1];
-      formData.append('photo_base64', base64);
-      formData.append('photo_name', file.name);
+      const fileInput = document.getElementById('photo');
+      const file = fileInput.files[0];
 
-      // 確認ログ
-      for (let pair of formData.entries()) {
-        console.log(pair[0], pair[1]);
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const base64 = evt.target.result.split(',')[1];
+          formData.append('photo_base64', base64);
+          formData.append('photo_name', file.name);
+
+          // 送信前確認ログ
+          for (let pair of formData.entries()) {
+            console.log('送信内容', pair[0], pair[1]);
+          }
+
+          sendFormData(formData);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        sendFormData(formData);
       }
 
-      sendFormData(formData);
-    };
-    reader.readAsDataURL(file);
-  } else {
-    sendFormData(formData);
-  }
-
-  function sendFormData(fd) {
-    fetch("https://script.google.com/macros/s/AKfycby2Hp3ZcykGabspLYwrWMJwA-u_HBAtAiZptWuHanhN0YLp2QKQEn9n8TWfR_-MpuYoTA/exec", {
-      method: "POST",
-      body: fd
-    })
-    .then(async res => {
-      let resText = await res.text();
-      document.getElementById('result').textContent = resText;
+      function sendFormData(fd) {
+        const GAS_URL = "YOUR_GAS_URL_HERE"; // ←あなたのGASウェブアプリURLに置き換えてください
+        document.getElementById('result').textContent = '送信中…';
+        fetch(GAS_URL, {
+          method: "POST",
+          body: fd
+        })
+        .then(async res => {
+          let resText = await res.text();
+          document.getElementById('result').textContent = resText;
+          console.log('レスポンス:', resText);
+        })
+        .catch(err => {
+          document.getElementById('result').textContent = "送信エラー: " + err;
+        });
+      }
     });
-  }
-});
-</script>
+  </script>
+</body>
+</html>
