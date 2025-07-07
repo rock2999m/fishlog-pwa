@@ -60,28 +60,38 @@
   });
 
   document.getElementById('fishForm').addEventListener('submit', function(e){
-    e.preventDefault();
+  e.preventDefault();
 
-    const form = e.target;
-    const formData = new FormData(form);
+  const form = e.target;
+  const formData = new FormData(form);
 
-    // 送信内容をconsoleログ
-    for (let pair of formData.entries()) {
-      console.log(`formData: ${pair[0]} =`, pair[1]);
-    }
+  const fileInput = document.getElementById('photo');
+  const file = fileInput.files[0];
 
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwjpGQdrXL7Kd8tqK_gkti9molGNiUCCidY7vFIB5UDD1Qpj63vDsfIQVCaJI_4u9rivw/exec"; // ←あなたのGAS URLに差し替えてください
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      // base64の部分だけ抽出
+      const base64 = evt.target.result.split(',')[1];
+      formData.append('photo_base64', base64);
+      formData.append('photo_name', file.name);
 
-    // ボタンを一時無効化
+      sendFormData(formData);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    sendFormData(formData); // 写真なしの場合
+  }
+
+  function sendFormData(fd) {
+    const GAS_URL = "https://script.google.com/macros/s/AKfycby2Hp3ZcykGabspLYwrWMJwA-u_HBAtAiZptWuHanhN0YLp2QKQEn9n8TWfR_-MpuYoTA/exec"; // あなたのGAS URL
     form.querySelector("button[type=submit]").disabled = true;
-
-    // fetch前にデバッグ表示
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').textContent = "送信中…";
 
     fetch(GAS_URL, {
       method: "POST",
-      body: formData
+      body: fd
     })
     .then(async res => {
       let resText = await res.text();
@@ -89,10 +99,6 @@
       let statusText = res.statusText;
       let parsed = null;
       try { parsed = JSON.parse(resText); } catch(e) {}
-      console.log('レスポンスstatus:', status, statusText);
-      console.log('レスポンスbody:', resText);
-
-      // 画面にも詳細表示
       document.getElementById('result').innerHTML =
         `<b>HTTPステータス:</b> ${status} ${statusText}<br>` +
         `<b>レスポンス:</b><br><pre>${resText.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>` +
@@ -101,19 +107,11 @@
       return res;
     })
     .catch(err => {
-      console.error("fetchエラー", err);
       document.getElementById('result').innerHTML =
         `<b>送信エラー:</b> ${err}<br><pre>${err.stack}</pre>`;
     })
     .finally(() => {
       form.querySelector("button[type=submit]").disabled = false;
     });
-  });
-</script>
-
-<!-- スマホ用デバッグツール（Eruda） -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
-</body>
-</html>
-
+  }
+});
