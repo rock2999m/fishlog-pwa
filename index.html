@@ -2,95 +2,117 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>GAS base64画像送信テスト</title>
+  <title>釣果記録プレビュー</title>
   <style>
-    body { font-family: sans-serif; }
-    #result { background: #f8f8dd; margin-top: 1em; padding: 1em; border-radius: 6px; }
+    body { font-family: sans-serif; max-width: 480px; margin: 2em auto; }
+    h2 { margin-top: 0; }
+    #preview { display:none; border:1px solid #ddd; padding:1em; margin-top:1em; border-radius:8px; background:#fafbfe;}
+    #preview img { max-width: 220px; border-radius:8px; }
+    .row { margin-bottom: 0.8em; }
+    label { display:inline-block; width:80px; }
+    input[type="file"] { width:100%; }
+    button { padding:0.6em 2em; margin-top:1em; font-size:1em; }
   </style>
 </head>
 <body>
-  <h2>GASにbase64画像＋テキストを送信テスト</h2>
-  <form id="fishForm">
-    <div>
-      <label>写真
-        <input type="file" id="photo" name="">
-      </label>
-    </div>
-    <div>
-      <label>メモ
-        <input type="text" name="memo" value="テスト送信">
-      </label>
-    </div>
-    <div>
-      <label>魚種
-        <input type="text" name="species" value="ひらめ">
-      </label>
-    </div>
-    <div>
-      <label>サイズ
-        <input type="text" name="size" value="60">
-      </label>
-    </div>
-    <div>
-      <label>日付
-        <input type="date" name="date" value="2025-07-07">
-      </label>
-    </div>
-    <div>
-      <label>場所
-        <input type="text" name="place" value="垂水">
-      </label>
-    </div>
-    <button type="submit">送信</button>
-  </form>
-  <div id="result"></div>
+<h2>釣果記録・自動判定</h2>
+<form id="uploadForm">
+  <div class="row"><label>画像</label><input type="file" id="photo" accept="image/*" required></div>
+  <div class="row"><label>魚種</label><input type="text" id="species" required></div>
+  <div class="row"><label>サイズ</label><input type="number" id="size" required></div>
+  <div class="row"><label>場所</label><input type="text" id="place" required></div>
+  <div class="row"><label>日付</label><input type="date" id="date" required></div>
+  <div class="row"><label>メモ</label><input type="text" id="memo"></div>
+  <button type="button" id="checkBtn">判定・確認</button>
+</form>
 
-  <script>
-    document.getElementById('fishForm').addEventListener('submit', function(e){
-      e.preventDefault();
+<div id="preview">
+  <h3>内容確認</h3>
+  <img id="previewImg" src=""><br>
+  <div id="previewData"></div>
+  <button id="registerBtn">登録</button>
+</div>
 
-      const form = e.target;
-      const formData = new FormData(form);
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxT9ZuIfeXmiYeKSpS3XK_drd_tQ0fC0XMLAa7jX-fQmQoO4JKvpazPGYadUPck_elrzQ/exec';
 
-      const fileInput = document.getElementById('photo');
-      const file = fileInput.files[0];
+document.getElementById('checkBtn').onclick = async () => {
+  const photo = document.getElementById('photo').files[0];
+  if (!photo) return alert('画像を選択してください');
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const base64 = e.target.result.split(',')[1];
+    const fd = new FormData();
+    fd.append('photo_base64', base64);
+    fd.append('photo_name', photo.name);
+    fd.append('species', document.getElementById('species').value);
+    fd.append('size', document.getElementById('size').value);
+    fd.append('place', document.getElementById('place').value);
+    fd.append('date', document.getElementById('date').value);
+    fd.append('memo', document.getElementById('memo').value);
+    fd.append('mode', 'check');
 
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          const base64 = evt.target.result.split(',')[1];
-          formData.append('photo_base64', base64);
-          formData.append('photo_name', file.name);
-
-          // 送信前確認ログ
-          for (let pair of formData.entries()) {
-            console.log('送信内容', pair[0], pair[1]);
-          }
-
-          sendFormData(formData);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        sendFormData(formData);
+    // 判定リクエスト送信
+    document.getElementById('checkBtn').disabled = true;
+    document.getElementById('checkBtn').innerText = '判定中…';
+    try {
+      const res = await fetch(GAS_URL, { method:'POST', body: fd });
+      const json = await res.json();
+      if (json.error) {
+        alert("解析に失敗しました: " + json.error);
+        document.getElementById('checkBtn').disabled = false;
+        document.getElementById('checkBtn').innerText = '判定・確認';
+        return;
       }
+      document.getElementById('preview').style.display = 'block';
+      document.getElementById('previewImg').src = json.photoUrl || '';
+      document.getElementById('previewData').innerHTML = `
+        <b>日付</b>: ${json.date}<br>
+        <b>時間</b>: ${json.time}<br>
+        <b>魚種</b>: ${json.fish}<br>
+        <b>サイズ</b>: ${json.size}<br>
+        <b>場所</b>: ${json.place}<br>
+        <b>港</b>: ${json.harbor}<br>
+        <b>潮</b>: ${json.tideTitle}<br>
+        <b>潮位</b>: ${json.tideHeight}<br>
+        <b>潮傾向</b>: ${json.trendText}<br>
+        <b>満潮</b>: ${json.highTide}<br>
+        <b>干潮</b>: ${json.lowTide}<br>
+        <b>メモ</b>: ${json.memo}
+      `;
+      window.fishlogPreview = json;
+    } catch(e) {
+      alert('サーバエラー: ' + e);
+    }
+    document.getElementById('checkBtn').disabled = false;
+    document.getElementById('checkBtn').innerText = '判定・確認';
+  }
+  reader.readAsDataURL(photo);
+};
 
-      function sendFormData(fd) {
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxT9ZuIfeXmiYeKSpS3XK_drd_tQ0fC0XMLAa7jX-fQmQoO4JKvpazPGYadUPck_elrzQ/exec"; // ←あなたのGASウェブアプリURLに置き換えてください
-        document.getElementById('result').textContent = '送信中…';
-        fetch(GAS_URL, {
-          method: "POST",
-          body: fd
-        })
-        .then(async res => {
-          let resText = await res.text();
-          document.getElementById('result').textContent = resText;
-          console.log('レスポンス:', resText);
-        })
-        .catch(err => {
-          document.getElementById('result').textContent = "送信エラー: " + err;
-        });
-      }
-    });
-  </script>
+// 登録処理
+document.getElementById('registerBtn').onclick = async () => {
+  const data = window.fishlogPreview;
+  if (!data) return;
+  const fd = new FormData();
+  // 登録用に全情報を送る
+  for (let k of ['date','time','fish','size','place','harbor','lat','lon','tideTitle','tideHeight','trendText','highTide','lowTide','memo','photoUrl']) {
+    fd.append(k, data[k]);
+  }
+  fd.append('mode', 'register');
+  document.getElementById('registerBtn').disabled = true;
+  document.getElementById('registerBtn').innerText = '登録中…';
+  try {
+    const res = await fetch(GAS_URL, { method:'POST', body: fd });
+    const json = await res.json();
+    alert('登録しました！');
+    window.location.reload();
+  } catch(e) {
+    alert('登録時エラー: ' + e);
+  }
+  document.getElementById('registerBtn').disabled = false;
+  document.getElementById('registerBtn').innerText = '登録';
+};
+</script>
 </body>
 </html>
