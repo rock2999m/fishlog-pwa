@@ -83,7 +83,7 @@
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzND7wd1WORp5JQ3OdoDJYkt-_PSvYETqadWf1Pxiq_YaZnOWqJ7xqjMMjADJn7mIG1RQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw1LD6d7BwAUYGOdXcyJQnQ8Fp2ehcdUCtQpIYKfG0zq8u5LWm_43IftG21R1epMlLmgA/exec';
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q";
 
 const $ = id => document.getElementById(id);
@@ -132,16 +132,16 @@ $('nextBtn').onclick = async () => {
       $('conf_lowTide').value = json.lowTide || "";
       $('conf_memo').value = json.memo || "";
 
-      // Google Map表示（港座標）
-      if(json.lat && json.lon) {
+      // Google Map表示（港座標のみ修正）
+      if(json.portLat && json.portLon) {
         setTimeout(()=>{
           const map = new google.maps.Map($('map'), {
-            center: {lat: parseFloat(json.lat), lng: parseFloat(json.lon)},
+            center: {lat: parseFloat(json.portLat), lng: parseFloat(json.portLon)},
             zoom: 15,
             disableDefaultUI: true
           });
           new google.maps.Marker({
-            position: {lat: parseFloat(json.lat), lng: parseFloat(json.lon)},
+            position: {lat: parseFloat(json.portLat), lng: parseFloat(json.portLon)},
             map: map,
             title: $('conf_place').value
           });
@@ -192,7 +192,7 @@ $('registerBtn').onclick = async () => {
   }
 };
 
-// 潮位グラフ描画（tideList=[{time,cm}, ...]）
+// 潮位グラフ描画（tideList=[{time,cm}, ...]）4時間ラベル＆中間線
 function drawTideGraph(tideList){
   const cvs = $('tideGraph');
   const ctx = cvs.getContext('2d');
@@ -204,7 +204,19 @@ function drawTideGraph(tideList){
   }
   // グラフスケール計算
   let min = Math.min(...tideList.map(t=>t.cm)), max = Math.max(...tideList.map(t=>t.cm));
+  const mid = (min+max)/2;
   const h = cvs.height, w = cvs.width;
+
+  // 横線(中間値)
+  ctx.beginPath();
+  ctx.moveTo(0, h - ((mid-min)/(max-min+1))*h*0.8-15);
+  ctx.lineTo(w, h - ((mid-min)/(max-min+1))*h*0.8-15);
+  ctx.strokeStyle="#e57373";
+  ctx.setLineDash([4,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 潮位線
   ctx.beginPath();
   ctx.moveTo(0, h - (tideList[0].cm-min)/(max-min+1)*h*0.8-15);
   tideList.forEach((d,i)=>{
@@ -214,14 +226,20 @@ function drawTideGraph(tideList){
   });
   ctx.strokeStyle="#3380ef"; ctx.lineWidth=2.5; ctx.stroke();
 
-  // 軸
+  // 4時間ごとのラベル
   ctx.fillStyle="#357";
   ctx.font="13px sans-serif";
-  ctx.fillText("0:00",2,h-8);
-  ctx.fillText("12:00",w/2-24,h-8);
-  ctx.fillText("24:00",w-48,h-8);
+  for(let h4=0; h4<=24; h4+=4){
+    const idx = tideList.findIndex(t=>t.time.startsWith(String(h4).padStart(2,"0")+":"));
+    if(idx>=0){
+      const x = idx * w/(tideList.length-1);
+      ctx.fillText(h4+":00", x-14, h-8);
+    }
+  }
+  // Y軸目盛り
   ctx.fillText(`${max}cm`,4,20);
   ctx.fillText(`${min}cm`,4,h-24);
+  ctx.fillText(`${mid.toFixed(1)}cm`,4,h/2);
 }
 </script>
 </body>
