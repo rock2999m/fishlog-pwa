@@ -37,6 +37,9 @@
     @keyframes spin { 100% { transform: rotate(360deg);} }
     #map { width:100%; height:180px; border-radius:12px; margin:0.7em 0; border:1.5px solid #d7e4fa; }
     #tideGraph { width:100%; max-width:380px; height:140px; margin:10px 0 0 0; border:1.5px solid #d7e4fa; border-radius:10px;}
+    .finishMsg {
+      font-size:1.15em; color:#246e3a; font-weight:bold; margin: 18px 0 2px 0; text-align:center;
+    }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=★YOUR_API_KEY★"></script>
 </head>
@@ -74,16 +77,16 @@
   <button id="registerBtn">登録</button>
 </div>
 
-<!-- オーバーレイ・確認中 -->
+<!-- オーバーレイ・確認中/アップロード中/完了 -->
 <div id="overlay">
   <div id="overlayInner">
-    <div style="color:#2a4b7c;font-size:1.1em; font-weight:bold;">確認中...</div>
+    <div id="overlayMsg" style="color:#2a4b7c;font-size:1.1em; font-weight:bold;">確認中...</div>
     <div class="spinner"></div>
   </div>
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwtZI_2WyZqT6Wue_pVcV5FL_exzOaahZfVuThjGyKnkYInLWeup9WeqP73E3nHKvuOUw/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzND7wd1WORp5JQ3OdoDJYkt-_PSvYETqadWf1Pxiq_YaZnOWqJ7xqjMMjADJn7mIG1RQ/exec';
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q";
 
 const $ = id => document.getElementById(id);
@@ -91,6 +94,7 @@ const $ = id => document.getElementById(id);
 // 入力→確認
 $('nextBtn').onclick = async () => {
   const photo = $('photo').files[0];
+  $('overlayMsg').innerText = '確認中...';
   $('overlay').style.display = 'flex';
 
   const reader = new FileReader();
@@ -104,6 +108,7 @@ $('nextBtn').onclick = async () => {
     fd.append('place', $('place').value);
     fd.append('date', $('date').value);
     fd.append('memo', $('memo').value);
+    fd.append('mode', 'preview'); // ★ここでプレビュー
 
     try {
       const res = await fetch(GAS_URL, { method:'POST', body: fd });
@@ -132,7 +137,7 @@ $('nextBtn').onclick = async () => {
       $('conf_lowTide').value = json.lowTide || "";
       $('conf_memo').value = json.memo || "";
 
-      // Google Map表示（港座標のみ修正）
+      // Google Map表示（港座標）
       if(json.portLat && json.portLon) {
         setTimeout(()=>{
           const map = new google.maps.Map($('map'), {
@@ -151,7 +156,7 @@ $('nextBtn').onclick = async () => {
       }
 
       // 潮位グラフ（24時間データ: json.tideList 配列形式[ {time,cm}, ... ])
-      drawTideGraph(json.tideList || []);
+      drawTideGraph(json.tideList || [], json.time);
       window.fishlogPreview = json;
     } catch(e) {
       $('overlay').style.display = 'none';
@@ -177,23 +182,28 @@ $('registerBtn').onclick = async () => {
   fd.append('highTide', $('conf_highTide').value);
   fd.append('lowTide', $('conf_lowTide').value);
   fd.append('memo', $('conf_memo').value);
-  ['lat','lon','photoUrl'].forEach(k=>orig[k] && fd.append(k, orig[k]));
+  ['lat','lon','photoUrl','portLat','portLon'].forEach(k=>orig[k] && fd.append(k, orig[k]));
+  fd.append('mode', 'register'); // ★ここで登録
 
+  $('overlayMsg').innerText = 'アップロード中...';
   $('overlay').style.display = 'flex';
   try {
     const res = await fetch(GAS_URL, { method:'POST', body: fd });
     const json = await res.json();
-    $('overlay').style.display = 'none';
-    alert('登録しました！');
-    window.location.reload();
+    $('overlayMsg').innerText = 'アップロード完了';
+    setTimeout(()=>{
+      $('overlay').style.display = 'none';
+      alert('登録しました！');
+      window.location.reload();
+    }, 1300); // 完了表示を1.3秒間見せる
   } catch(e) {
     $('overlay').style.display = 'none';
     alert('登録時エラー: ' + e);
   }
 };
 
-// 潮位グラフ描画（tideList=[{time,cm}, ...]）4時間ラベル＆中間線
-function drawTideGraph(tideList){
+// 潮位グラフ描画（tideList=[{time,cm}, ...], shotTime="hh:mm:ss"）
+function drawTideGraph(tideList, shotTime){
   const cvs = $('tideGraph');
   const ctx = cvs.getContext('2d');
   ctx.clearRect(0,0,cvs.width,cvs.height);
@@ -204,19 +214,8 @@ function drawTideGraph(tideList){
   }
   // グラフスケール計算
   let min = Math.min(...tideList.map(t=>t.cm)), max = Math.max(...tideList.map(t=>t.cm));
-  const mid = (min+max)/2;
   const h = cvs.height, w = cvs.width;
-
-  // 横線(中間値)
-  ctx.beginPath();
-  ctx.moveTo(0, h - ((mid-min)/(max-min+1))*h*0.8-15);
-  ctx.lineTo(w, h - ((mid-min)/(max-min+1))*h*0.8-15);
-  ctx.strokeStyle="#e57373";
-  ctx.setLineDash([4,4]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // 潮位線
+  // グラフ本体
   ctx.beginPath();
   ctx.moveTo(0, h - (tideList[0].cm-min)/(max-min+1)*h*0.8-15);
   tideList.forEach((d,i)=>{
@@ -226,20 +225,42 @@ function drawTideGraph(tideList){
   });
   ctx.strokeStyle="#3380ef"; ctx.lineWidth=2.5; ctx.stroke();
 
-  // 4時間ごとのラベル
+  // 中心線（値は記載しない）
+  ctx.beginPath();
+  const midY = h - (( (max+min)/2 - min ) / (max-min+1) )*h*0.8-15;
+  ctx.moveTo(0, midY);
+  ctx.lineTo(w, midY);
+  ctx.setLineDash([5,6]);
+  ctx.strokeStyle="#bbb";
+  ctx.lineWidth=1.1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 時間軸ラベル（4時間単位）
   ctx.fillStyle="#357";
   ctx.font="13px sans-serif";
-  for(let h4=0; h4<=24; h4+=4){
-    const idx = tideList.findIndex(t=>t.time.startsWith(String(h4).padStart(2,"0")+":"));
-    if(idx>=0){
-      const x = idx * w/(tideList.length-1);
-      ctx.fillText(h4+":00", x-14, h-8);
-    }
+  for(let hLabel=0; hLabel<=24; hLabel+=4){
+    const idx = Math.round((hLabel/24)*(tideList.length-1));
+    const x = idx * w/(tideList.length-1);
+    ctx.fillText(`${hLabel}:00`, x-14, h-8);
   }
-  // Y軸目盛り
   ctx.fillText(`${max}cm`,4,20);
   ctx.fillText(`${min}cm`,4,h-24);
-  ctx.fillText(`${mid.toFixed(1)}cm`,4,h/2);
+
+  // 釣った時間を赤線で表示
+  if(shotTime){
+    let st = shotTime.split(":");
+    if(st.length<2) st = [shotTime.slice(0,2), shotTime.slice(2,4)];
+    let shotSec = parseInt(st[0]||"0")*3600 + parseInt(st[1]||"0")*60 + parseInt(st[2]||"0");
+    const shotX = (shotSec/86400)*w; // 24h=86400秒
+    ctx.beginPath();
+    ctx.moveTo(shotX, 10);
+    ctx.lineTo(shotX, h-30);
+    ctx.strokeStyle="#f03947";
+    ctx.lineWidth=2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
 }
 </script>
 </body>
