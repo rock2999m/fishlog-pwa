@@ -8,15 +8,16 @@
     body { font-family: sans-serif; max-width: 500px; margin: 2em auto; background:#fafbfe;}
     h2, h3 { margin-top: 0; }
     .hidden { display:none; }
-    .row { margin-bottom: 0.8em; }
+    .row { margin-bottom: 0.8em; display:flex; align-items:center;}
     label { display:inline-block; width:90px; }
     input, select, textarea { font-size:1em; width:60%; }
     input[type="file"] { width:100%; }
-    button { padding:0.7em 2em; margin-top:1em; font-size:1em; border-radius:6px; border:none; background:#3887ef; color:#fff; }
+    button { padding:0.7em 0; margin-left:8px; font-size:1em; border-radius:6px; border:none; background:#4887ef; color:#fff; width:85px;}
     button:disabled { background: #c5defa; color:#333;}
     #previewImg { max-width: 220px; border-radius:8px; }
     .step { background: #fff; border-radius:10px; padding:2em 1.5em; box-shadow:0 2px 12px #0001;}
     .field-label {font-size:0.93em;}
+
     #overlay {
       display:none; position:fixed; left:0; top:0; width:100vw; height:100vh;
       background:rgba(30,30,40,0.20); z-index:1000; justify-content:center; align-items:center; flex-direction:column;
@@ -36,16 +37,14 @@
     @keyframes spin { 100% { transform: rotate(360deg);} }
     #map { width:100%; height:180px; border-radius:12px; margin:0.7em 0; border:1.5px solid #d7e4fa; }
     #tideGraph { width:100%; max-width:380px; height:140px; margin:10px 0 0 0; border:1.5px solid #d7e4fa; border-radius:10px;}
-    #mapModal {
-      display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(30,40,70,0.16); z-index:2000; align-items:center; justify-content:center;
-    }
-    #mapModalInner {
-      background:#fff; padding:14px 18px; border-radius:10px; box-shadow:0 2px 16px #0004;
-    }
-    #modalMap { width:350px; height:320px;}
-    #mapModalBtns { text-align:right; margin-top:10px;}
+    /* モーダル */
+    #modalMapBg {display:none;position:fixed;z-index:2000;top:0;left:0;width:100vw;height:100vh;background:rgba(30,40,70,0.18);}
+    #modalMapInner {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:24px 20px 20px 20px;border-radius:14px;min-width:340px;}
+    #modalMapTitle {font-weight:bold;font-size:1.1em;margin-bottom:8px;}
+    #modalMapCanvas {width:320px;height:300px;border-radius:12px;border:1.2px solid #b6d1fa;}
+    #modalMapBtns {text-align:right;margin-top:10px;}
   </style>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=★YOUR_API_KEY★"></script>
 </head>
 <body>
 
@@ -53,15 +52,15 @@
 <div class="step" id="step1">
   <h2>釣果記録 入力</h2>
   <div class="row"><label>画像</label><input type="file" id="photo" accept="image/*"></div>
-  <div class="row"><label>魚種</label><input type="text" id="species"></div>
-  <div class="row"><label>サイズ</label><input type="number" id="size"></div>
-  <div class="row" style="display:flex; align-items:center;">
-    <label style="flex:0 0 90px;">場所</label>
-    <input type="text" id="place" style="flex:1 1 auto; min-width:0; margin-right:7px;">
-    <button type="button" id="pickMapBtn" style="flex:0 0 auto; min-width:70px; padding: 0 18px; height: 34px; line-height: 34px; font-size: 0.97em; margin:0; background: #468dfb; color: #fff; border: none; border-radius: 7px; display: inline-block; vertical-align: middle; box-sizing: border-box; cursor: pointer;">MAP</button>
+  <div class="row"><label>魚種</label><input type="text" id="species" required></div>
+  <div class="row"><label>サイズ</label><input type="number" id="size" required></div>
+  <div class="row">
+    <label>場所</label>
+    <input type="text" id="place">
+    <button type="button" id="mapBtn1">地図</button>
   </div>
   <div class="row"><label>日付</label><input type="date" id="date"></div>
-  <div class="row"><label>時間</label><input type="time" id="time" step="1"></div>
+  <div class="row"><label>時間</label><input type="time" id="time" step="60"></div>
   <div class="row"><label>メモ</label><input type="text" id="memo"></div>
   <button type="button" id="nextBtn">次へ</button>
 </div>
@@ -71,98 +70,130 @@
   <h2>内容のご確認・編集</h2>
   <img id="previewImg" src=""><br>
   <div class="row"><span class="field-label">日付</span><input type="date" id="conf_date"></div>
-  <div class="row"><span class="field-label">時間</span><input type="time" id="conf_time" step="1"></div>
+  <div class="row"><span class="field-label">時間</span><input type="time" id="conf_time" step="60"></div>
   <div class="row"><span class="field-label">魚種</span><input type="text" id="conf_fish"></div>
   <div class="row"><span class="field-label">サイズ</span><input type="number" id="conf_size"></div>
-  <div class="row"><span class="field-label">場所</span><input type="text" id="conf_place"></div>
+  <div class="row">
+    <span class="field-label">場所</span>
+    <input type="text" id="conf_place">
+    <button type="button" id="mapBtn2">地図</button>
+  </div>
   <div class="row"><span class="field-label">潮</span><input type="text" id="conf_tideTitle"></div>
   <div class="row"><span class="field-label">潮位</span><input type="number" id="conf_tideHeight"></div>
   <div class="row"><span class="field-label">潮傾向</span><input type="text" id="conf_trendText"></div>
   <div class="row"><span class="field-label">満潮</span><input type="text" id="conf_highTide"></div>
   <div class="row"><span class="field-label">干潮</span><input type="text" id="conf_lowTide"></div>
   <div class="row"><span class="field-label">メモ</span><input type="text" id="conf_memo"></div>
+  <div style="margin-bottom:8px;">
+    <button id="reloadTideBtn" type="button" style="background:#7d9dff;width:auto;padding:0.6em 1.3em;">潮位情報再取得</button>
+  </div>
   <div id="map"></div>
   <canvas id="tideGraph"></canvas>
   <button id="registerBtn">登録</button>
 </div>
 
-<!-- モーダル地図選択 -->
-<div id="mapModal">
-  <div id="mapModalInner">
-    <div id="modalMap"></div>
-    <div id="mapModalBtns">
-      <button id="mapSelectBtn">この位置に決定</button>
-      <button id="mapCancelBtn">キャンセル</button>
-    </div>
-  </div>
-</div>
-
 <!-- オーバーレイ・確認中 -->
 <div id="overlay">
   <div id="overlayInner">
-    <div style="color:#2a4b7c;font-size:1.1em; font-weight:bold;">確認中...</div>
+    <div id="overlayText" style="color:#2a4b7c;font-size:1.1em; font-weight:bold;">確認中...</div>
     <div class="spinner"></div>
   </div>
 </div>
 
-<script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxBXNkHpfOolHrwYuClS1SOTZu3k0AYeDYf7Ux4eyekrSelyr5mN7wb_5FJYs_OBdVSLQ/exec';
+<!-- 地図選択モーダル -->
+<div id="modalMapBg">
+  <div id="modalMapInner">
+    <div id="modalMapTitle">地図から場所を選択</div>
+    <div id="modalMapCanvas"></div>
+    <div id="modalMapBtns">
+      <button type="button" id="mapSelectBtn">選択</button>
+      <button type="button" id="mapCancelBtn" style="background:#aaa;">キャンセル</button>
+    </div>
+  </div>
+</div>
 
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzND7wd1WORp5JQ3OdoDJYkt-_PSvYETqadWf1Pxiq_YaZnOWqJ7xqjMMjADJn7mIG1RQ/exec';
+const GOOGLE_MAPS_API_KEY = "AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q";
 const $ = id => document.getElementById(id);
 
-// ------ 地図から場所選択 モーダル --------
-let pickedLatLng = null;
-$('pickMapBtn').onclick = function(){
-  $('mapModal').style.display = 'flex';
-  setTimeout(()=>{
-    const map = new google.maps.Map($('modalMap'), {
-      center: { lat: 34.7, lng: 135.3 },
-      zoom: 11
+let mapPicker, pickedLatLng = null, mapPickerMarker = null, mapPickerOnUpdate;
+function showMapModal(currentVal, onUpdate) {
+  document.getElementById('modalMapBg').style.display = 'block';
+  mapPickerOnUpdate = onUpdate;
+  setTimeout(() => {
+    // 初期値：入力値から緯度経度パース or デフォルト位置
+    let lat = 34.68, lng = 135.19;
+    if (currentVal && currentVal.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/)) {
+      const m = currentVal.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+      lat = parseFloat(m[1]);
+      lng = parseFloat(m[3]);
+    }
+    mapPicker = new google.maps.Map(document.getElementById('modalMapCanvas'), {
+      center: {lat, lng},
+      zoom: 12,
+      disableDefaultUI: true
     });
-    let marker = null;
-    map.addListener('click', function(e){
-      if(marker) marker.setMap(null);
-      marker = new google.maps.Marker({ position: e.latLng, map: map });
-      pickedLatLng = e.latLng;
+    mapPickerMarker = new google.maps.Marker({
+      position: {lat, lng},
+      map: mapPicker,
+      draggable: true
     });
-  }, 50);
-};
-
-$('mapCancelBtn').onclick = function(){
-  $('mapModal').style.display = 'none';
-  pickedLatLng = null;
-};
-
-$('mapSelectBtn').onclick = function(){
-  if(!pickedLatLng){
-    alert('地図上で位置をクリックしてください');
-    return;
+    mapPicker.addListener('click', function(e){
+      mapPickerMarker.setPosition(e.latLng);
+    });
+    pickedLatLng = {lat, lng};
+    mapPickerMarker.addListener('position_changed', function(){
+      pickedLatLng = {lat: mapPickerMarker.getPosition().lat(), lng: mapPickerMarker.getPosition().lng()};
+    });
+  }, 100);
+}
+$('mapCancelBtn').onclick = ()=> { document.getElementById('modalMapBg').style.display='none'; };
+$('mapSelectBtn').onclick = ()=> {
+  document.getElementById('modalMapBg').style.display='none';
+  if (mapPickerOnUpdate && pickedLatLng) {
+    mapPickerOnUpdate(`${pickedLatLng.lat.toFixed(6)},${pickedLatLng.lng.toFixed(6)}`);
   }
-  $('place').value = `${pickedLatLng.lat().toFixed(6)},${pickedLatLng.lng().toFixed(6)}`;
-  $('mapModal').style.display = 'none';
 };
+// 入力画面
+$('mapBtn1').onclick = ()=> {
+  showMapModal($('place').value, v=>$('place').value = v);
+};
+// 確認画面
+$('mapBtn2').onclick = ()=> {
+  showMapModal($('conf_place').value, v=>{
+    $('conf_place').value = v;
+    // 緯度経度の場合のみ潮位API再照合
+    if(v.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/)){
+      fetchTideAndUpdateConfirm();
+    }
+  });
+};
+// 潮位再取得ボタン
+$('reloadTideBtn').onclick = ()=> fetchTideAndUpdateConfirm();
 
-// ------- 入力→確認 -------
+function isLatLon(str){
+  return str && str.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+}
+
+// 入力→確認
 $('nextBtn').onclick = async () => {
+  // 必須チェック
+  if (!$('species').value.trim() || !$('size').value.trim()) {
+    alert("魚種・サイズは必須です"); return;
+  }
+  if (!$('photo').files[0] && (!$('date').value || !$('time').value)) {
+    alert("写真なしの場合、日付・時間は必須です"); return;
+  }
   const photo = $('photo').files[0];
+  $('overlayText').innerText = '確認中...';
   $('overlay').style.display = 'flex';
-
-  // 必須: 魚種・サイズ、写真なしなら場所（緯度経度）と日付・時間
-  if(!$('species').value.trim() || !$('size').value.trim()){
-    $('overlay').style.display = 'none';
-    alert('魚種とサイズは必須です');
-    return;
-  }
-  if(!photo && (!$('place').value.match(/^[-\d.]+,[-\d.]+$/) || !$('date').value || !$('time').value)){
-    $('overlay').style.display = 'none';
-    alert('写真なしの場合は「地図で場所選択」と日付・時間が必須です');
-    return;
-  }
 
   const reader = new FileReader();
   reader.onload = async function(e) {
     const base64 = photo ? e.target.result.split(',')[1] : "";
     const fd = new FormData();
+    fd.append('mode', 'preview');
     fd.append('photo_base64', base64);
     fd.append('photo_name', photo ? photo.name : "");
     fd.append('species', $('species').value);
@@ -171,7 +202,6 @@ $('nextBtn').onclick = async () => {
     fd.append('date', $('date').value);
     fd.append('time', $('time').value);
     fd.append('memo', $('memo').value);
-    fd.append('mode', 'preview');
 
     try {
       const res = await fetch(GAS_URL, { method:'POST', body: fd });
@@ -191,7 +221,7 @@ $('nextBtn').onclick = async () => {
       $('conf_time').value = json.time || "";
       $('conf_fish').value = json.fish || "";
       $('conf_size').value = json.size || "";
-      $('conf_place').value = json.harbor || json.place || "";
+      $('conf_place').value = json.portLat && json.portLon ? `${json.portLat},${json.portLon}` : (json.harbor || json.place || "");
       $('conf_tideTitle').value = json.tideTitle || "";
       $('conf_tideHeight').value = json.tideHeight || "";
       $('conf_trendText').value = json.trendText || "";
@@ -200,25 +230,12 @@ $('nextBtn').onclick = async () => {
       $('conf_memo').value = json.memo || "";
 
       // Google Map表示（港座標）
-      if(json.portLat && json.portLon) {
-        setTimeout(()=>{
-          const map = new google.maps.Map($('map'), {
-            center: {lat: parseFloat(json.portLat), lng: parseFloat(json.portLon)},
-            zoom: 15,
-            disableDefaultUI: true
-          });
-          new google.maps.Marker({
-            position: {lat: parseFloat(json.portLat), lng: parseFloat(json.portLon)},
-            map: map,
-            title: $('conf_place').value
-          });
-        }, 100);
-      } else {
-        $('map').innerHTML = '港位置が取得できません';
-      }
+      showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
 
-      // 潮位グラフ（24時間データ: json.tideList 配列形式[ {time,cm}, ... ])
-      drawTideGraph(json.tideList || [], json.time || "");
+      // 潮位グラフ
+      drawTideGraph(json.tideList || [], json.time);
+
+      // 確認画面の港情報・潮位情報も保持
       window.fishlogPreview = json;
     } catch(e) {
       $('overlay').style.display = 'none';
@@ -232,7 +249,15 @@ $('nextBtn').onclick = async () => {
 $('registerBtn').onclick = async () => {
   const orig = window.fishlogPreview;
   if (!orig) return;
+  // 必須チェック
+  if (!$('conf_fish').value.trim() || !$('conf_size').value.trim()) {
+    alert("魚種・サイズは必須です"); return;
+  }
+  if (!$('previewImg').src && (!$('conf_date').value || !$('conf_time').value)) {
+    alert("写真なしの場合、日付・時間は必須です"); return;
+  }
   const fd = new FormData();
+  fd.append('mode', 'register');
   fd.append('date', $('conf_date').value.replace(/-/g,"/"));
   fd.append('time', $('conf_time').value);
   fd.append('fish', $('conf_fish').value);
@@ -244,24 +269,79 @@ $('registerBtn').onclick = async () => {
   fd.append('highTide', $('conf_highTide').value);
   fd.append('lowTide', $('conf_lowTide').value);
   fd.append('memo', $('conf_memo').value);
-  ['lat','lon','photoUrl'].forEach(k=>orig[k] && fd.append(k, orig[k]));
-  fd.append('mode','register');
-
+  ['portLat','portLon','photoUrl','tideList'].forEach(k=>orig[k] && fd.append(k, orig[k]));
+  $('overlayText').innerText = 'アップロード中...';
   $('overlay').style.display = 'flex';
   try {
     const res = await fetch(GAS_URL, { method:'POST', body: fd });
     const json = await res.json();
-    $('overlay').style.display = 'none';
-    alert('登録しました！');
-    window.location.reload();
+    $('overlayText').innerText = 'アップロード完了！';
+    setTimeout(()=>{ $('overlay').style.display = 'none'; window.location.reload(); }, 1100);
   } catch(e) {
     $('overlay').style.display = 'none';
     alert('登録時エラー: ' + e);
   }
 };
 
-// 潮位グラフ描画
-function drawTideGraph(tideList, timeStr){
+// 潮位再取得（緯度経度で場所指定→照合しなおし）
+async function fetchTideAndUpdateConfirm() {
+  const latlon = $('conf_place').value;
+  if (!isLatLon(latlon)) {
+    alert('緯度経度の形式で場所を入力してください'); return;
+  }
+  $('overlayText').innerText = '潮位再取得中...';
+  $('overlay').style.display = 'flex';
+  try {
+    const fd = new FormData();
+    fd.append('mode', 'preview');
+    fd.append('species', $('conf_fish').value);
+    fd.append('size', $('conf_size').value);
+    fd.append('place', latlon);
+    fd.append('date', $('conf_date').value);
+    fd.append('time', $('conf_time').value);
+    fd.append('memo', $('conf_memo').value);
+    // 写真は不要
+    const res = await fetch(GAS_URL, { method:'POST', body: fd });
+    const json = await res.json();
+    $('overlay').style.display = 'none';
+    // 再反映
+    $('conf_tideTitle').value = json.tideTitle || "";
+    $('conf_tideHeight').value = json.tideHeight || "";
+    $('conf_trendText').value = json.trendText || "";
+    $('conf_highTide').value = json.highTide || "";
+    $('conf_lowTide').value = json.lowTide || "";
+    showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
+    drawTideGraph(json.tideList || [], json.time);
+    // 反映
+    window.fishlogPreview = json;
+  } catch(e) {
+    $('overlay').style.display = 'none';
+    alert('潮位情報再取得エラー: ' + e);
+  }
+}
+
+// Googleマップ描画
+function showGoogleMap(lat, lon, label) {
+  if(!lat || !lon) {
+    $('map').innerHTML = '港位置が取得できません';
+    return;
+  }
+  setTimeout(()=>{
+    const m = new google.maps.Map($('map'), {
+      center: {lat:parseFloat(lat), lng:parseFloat(lon)},
+      zoom: 15,
+      disableDefaultUI: true
+    });
+    new google.maps.Marker({
+      position: {lat:parseFloat(lat), lng:parseFloat(lon)},
+      map: m,
+      title: label||''
+    });
+  }, 100);
+}
+
+// 潮位グラフ描画（tideList=[{time,cm}, ...]）+釣果時刻マーク
+function drawTideGraph(tideList, catchTime){
   const cvs = $('tideGraph');
   const ctx = cvs.getContext('2d');
   ctx.clearRect(0,0,cvs.width,cvs.height);
@@ -272,50 +352,75 @@ function drawTideGraph(tideList, timeStr){
   }
   // グラフスケール計算
   let min = Math.min(...tideList.map(t=>t.cm)), max = Math.max(...tideList.map(t=>t.cm));
-  const h = cvs.height, w = cvs.width;
+  const h = cvs.height, w = cvs.width, padT=30, padB=24;
+  // グラフ線
   ctx.beginPath();
-  ctx.moveTo(0, h - (tideList[0].cm-min)/(max-min+1)*h*0.8-15);
   tideList.forEach((d,i)=>{
-    const x = i * w/(tideList.length-1);
-    const y = h - ((d.cm-min)/(max-min+1))*h*0.8-15;
-    ctx.lineTo(x, y);
+    const x = i * (w-1)/(tideList.length-1);
+    const y = padT + (h-padT-padB) * (1-(d.cm-min)/(max-min+1));
+    if(i==0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   });
   ctx.strokeStyle="#3380ef"; ctx.lineWidth=2.5; ctx.stroke();
 
   // 4時間ごとの縦線
-  for(let hour=4; hour<24; hour+=4){
-    let idx = tideList.findIndex(t=>t.time.startsWith(String(hour).padStart(2,'0')+":"));
-    if(idx!==-1){
-      let x = idx * w/(tideList.length-1);
+  ctx.save();
+  ctx.strokeStyle="#bbbbbb";
+  ctx.setLineDash([3, 7]);
+  for(let h=0; h<=24; h+=4){
+    const idx = tideList.findIndex(d=>d.time && d.time.startsWith(String(h).padStart(2,'0')));
+    if(idx>=0){
+      const x = idx * (w-1)/(tideList.length-1);
       ctx.beginPath();
-      ctx.moveTo(x, 10);
-      ctx.lineTo(x, h-10);
-      ctx.strokeStyle = "#99b7ef";
-      ctx.lineWidth = 1;
+      ctx.moveTo(x, padT-2);
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));//冗長防止
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-8);
+      ctx.moveTo(x, h-8);
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-8);
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-8);
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, h-8);
+      ctx.lineTo(x, padT);
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
       ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
-  // 軸ラベル
+  ctx.restore();
+
+  // 軸
   ctx.fillStyle="#357";
   ctx.font="13px sans-serif";
   ctx.fillText("0:00",2,h-8);
   ctx.fillText("12:00",w/2-24,h-8);
   ctx.fillText("24:00",w-48,h-8);
-  ctx.fillText(`${max}cm`,4,24);
-  ctx.fillText(`${min}cm`,4,h-18);
+  ctx.fillText(`${max}cm`,4,padT+8);
+  ctx.fillText(`${min}cm`,4,h-padB+4);
 
-  // 釣った時間（縦赤線）
-  if(timeStr){
-    let hour = parseInt(timeStr.split(':')[0],10), minT = parseInt(timeStr.split(':')[1],10)||0;
-    let totalMin = hour*60+minT;
-    let idx = Math.round(totalMin/(1440)*(tideList.length-1));
-    let x = idx * w/(tideList.length-1);
+  // 釣果時刻マーク
+  if(catchTime){
+    const [hh, mm] = catchTime.split(':').map(Number);
+    const sec = hh*3600 + mm*60;
+    const idx = Math.round(sec / (24*3600) * (tideList.length-1));
+    const x = idx * (w-1)/(tideList.length-1);
     ctx.beginPath();
-    ctx.moveTo(x, 10);
-    ctx.lineTo(x, h-10);
-    ctx.strokeStyle = "#e63b1c";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.arc(x, padT + (h-padT-padB) * (1-(tideList[idx].cm-min)/(max-min+1)), 6, 0, Math.PI*2);
+    ctx.fillStyle="#ef3820";
+    ctx.globalAlpha=0.9;
+    ctx.fill();
+    ctx.globalAlpha=1;
   }
 }
 </script>
