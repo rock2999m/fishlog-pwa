@@ -221,7 +221,9 @@ $('nextBtn').onclick = async () => {
       $('conf_time').value = json.time || "";
       $('conf_fish').value = json.fish || "";
       $('conf_size').value = json.size || "";
-      $('conf_place').value = json.portLat && json.portLon ? `${json.portLat},${json.portLon}` : (json.harbor || json.place || "");
+      // ------ ▼▼▼ 修正：港名のみ反映 ▼▼▼ ------
+      $('conf_place').value = json.harbor || json.place || "";
+      // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
       $('conf_tideTitle').value = json.tideTitle || "";
       $('conf_tideHeight').value = json.tideHeight || "";
       $('conf_trendText').value = json.trendText || "";
@@ -262,7 +264,9 @@ $('registerBtn').onclick = async () => {
   fd.append('time', $('conf_time').value);
   fd.append('fish', $('conf_fish').value);
   fd.append('size', $('conf_size').value);
+  // ------ ▼▼▼ 修正：港名のみ送信 ▼▼▼ ------
   fd.append('place', $('conf_place').value);
+  // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
   fd.append('tideTitle', $('conf_tideTitle').value);
   fd.append('tideHeight', $('conf_tideHeight').value);
   fd.append('trendText', $('conf_trendText').value);
@@ -296,7 +300,9 @@ async function fetchTideAndUpdateConfirm() {
     fd.append('mode', 'preview');
     fd.append('species', $('conf_fish').value);
     fd.append('size', $('conf_size').value);
+    // ------ ▼▼▼ 修正：港名でなく緯度経度で送信（再取得の場合のみ） ▼▼▼ ------
     fd.append('place', latlon);
+    // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
     fd.append('date', $('conf_date').value);
     fd.append('time', $('conf_time').value);
     fd.append('memo', $('conf_memo').value);
@@ -310,6 +316,9 @@ async function fetchTideAndUpdateConfirm() {
     $('conf_trendText').value = json.trendText || "";
     $('conf_highTide').value = json.highTide || "";
     $('conf_lowTide').value = json.lowTide || "";
+    // ------ ▼▼▼ 修正：再取得後も港名を反映 ▼▼▼ ------
+    $('conf_place').value = json.harbor || json.place || "";
+    // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
     showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
     drawTideGraph(json.tideList || [], json.time);
     // 反映
@@ -372,28 +381,7 @@ function drawTideGraph(tideList, catchTime){
       const x = idx * (w-1)/(tideList.length-1);
       ctx.beginPath();
       ctx.moveTo(x, padT-2);
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));//冗長防止
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-8);
-      ctx.moveTo(x, h-8);
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.moveTo(x, padT);
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-8);
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-8);
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
-      ctx.lineTo(x, h-8);
-      ctx.lineTo(x, padT);
-      ctx.moveTo(x, padT);
-      ctx.lineTo(x, h-padB+padT+(h-padT-padB));
+      ctx.lineTo(x, cvs.height-padB+2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
