@@ -17,23 +17,9 @@
     #previewImg { max-width: 220px; border-radius:8px; }
     .step { background: #fff; border-radius:10px; padding:2em 1.5em; box-shadow:0 2px 12px #0001;}
     .field-label {font-size:0.93em;}
-
-    #overlay {
-      display:none; position:fixed; left:0; top:0; width:100vw; height:100vh;
-      background:rgba(30,30,40,0.20); z-index:1000; justify-content:center; align-items:center; flex-direction:column;
-    }
-    #overlayInner {
-      background:rgba(255,255,255,0.95);
-      border-radius: 16px;
-      box-shadow: 0 2px 16px #0002;
-      border: 2.5px solid #8bb2e6;
-      min-width:220px;
-      padding: 36px 36px 24px 36px;
-      display:flex; flex-direction:column; align-items:center;
-    }
-    .spinner {
-      width: 52px; height: 52px; border: 7px solid #e1e8f6; border-top: 7px solid #3887ef; border-radius: 50%; animation: spin 1s linear infinite; margin:18px;
-    }
+    #overlay { display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(30,30,40,0.20); z-index:1000; justify-content:center; align-items:center; flex-direction:column; }
+    #overlayInner { background:rgba(255,255,255,0.95); border-radius: 16px; box-shadow: 0 2px 16px #0002; border: 2.5px solid #8bb2e6; min-width:220px; padding: 36px 36px 24px 36px; display:flex; flex-direction:column; align-items:center;}
+    .spinner { width: 52px; height: 52px; border: 7px solid #e1e8f6; border-top: 7px solid #3887ef; border-radius: 50%; animation: spin 1s linear infinite; margin:18px;}
     @keyframes spin { 100% { transform: rotate(360deg);} }
     #map { width:100%; height:180px; border-radius:12px; margin:0.7em 0; border:1.5px solid #d7e4fa; }
     #tideGraph { width:100%; max-width:380px; height:140px; margin:10px 0 0 0; border:1.5px solid #d7e4fa; border-radius:10px;}
@@ -118,11 +104,11 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q";
 const $ = id => document.getElementById(id);
 
 let mapPicker, pickedLatLng = null, mapPickerMarker = null, mapPickerOnUpdate;
+
 function showMapModal(currentVal, onUpdate) {
   document.getElementById('modalMapBg').style.display = 'block';
   mapPickerOnUpdate = onUpdate;
   setTimeout(() => {
-    // 初期値：入力値から緯度経度パース or デフォルト位置
     let lat = 34.68, lng = 135.19;
     if (currentVal && currentVal.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/)) {
       const m = currentVal.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
@@ -148,25 +134,35 @@ function showMapModal(currentVal, onUpdate) {
     });
   }, 100);
 }
+
 $('mapCancelBtn').onclick = ()=> { document.getElementById('modalMapBg').style.display='none'; };
-$('mapSelectBtn').onclick = ()=> {
+
+// 入力画面
+$('mapBtn1').onclick = ()=> {
+  showMapModal($('place').value, v=>$('place').value = v);
+};
+
+// 確認画面
+$('mapBtn2').onclick = ()=> {
+  showMapModal($('conf_place').value, async v=>{
+    $('conf_place').value = v;
+    // ▼▼ モーダルで選択されたら 緯度経度で潮位情報再取得 ▼▼
+    if(v.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/)){
+      await fetchTideByLatLonAndUpdateConfirm(v);
+    }
+  });
+};
+
+// モーダル「選択」ボタン（mapPickerOnUpdateに処理が入る）
+$('mapSelectBtn').onclick = ()=>{
   document.getElementById('modalMapBg').style.display='none';
   if (mapPickerOnUpdate && pickedLatLng) {
     mapPickerOnUpdate(`${pickedLatLng.lat.toFixed(6)},${pickedLatLng.lng.toFixed(6)}`);
   }
 };
-// 入力画面
-$('mapBtn1').onclick = ()=> {
-  showMapModal($('place').value, v=>$('place').value = v);
-};
-// 確認画面
-$('mapBtn2').onclick = ()=> {
-  showMapModal($('conf_place').value, v=>{
-    $('conf_place').value = v;
-  });
-};
-// 潮位再取得ボタン
-$('reloadTideBtn').onclick = ()=> fetchTideAndUpdateConfirm();
+
+// 潮位再取得ボタン（港名で取得）
+$('reloadTideBtn').onclick = ()=> fetchTideByPlaceNameAndUpdateConfirm();
 
 function isLatLon(str){
   return str && str.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
@@ -174,7 +170,6 @@ function isLatLon(str){
 
 // 入力→確認
 $('nextBtn').onclick = async () => {
-  // 必須チェック
   if (!$('species').value.trim() || !$('size').value.trim()) {
     alert("魚種・サイズは必須です"); return;
   }
@@ -207,12 +202,9 @@ $('nextBtn').onclick = async () => {
         alert("解析に失敗しました: " + json.error);
         return;
       }
-      // step1→step2
       $('step1').classList.add('hidden');
       $('step2').classList.remove('hidden');
-      // 画像
       $('previewImg').src = json.photoUrl || '';
-      // 項目反映
       $('conf_date').value = (json.date||"").replace(/\//g, "-");
       $('conf_time').value = json.time || "";
       $('conf_fish').value = json.fish || "";
@@ -224,14 +216,8 @@ $('nextBtn').onclick = async () => {
       $('conf_highTide').value = json.highTide || "";
       $('conf_lowTide').value = json.lowTide || "";
       $('conf_memo').value = json.memo || "";
-
-      // Google Map表示（港座標）
       showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
-
-      // 潮位グラフ
       drawTideGraph(json.tideList || [], json.time);
-
-      // 確認画面の港情報・潮位情報も保持
       window.fishlogPreview = json;
     } catch(e) {
       $('overlay').style.display = 'none';
@@ -245,7 +231,6 @@ $('nextBtn').onclick = async () => {
 $('registerBtn').onclick = async () => {
   const orig = window.fishlogPreview;
   if (!orig) return;
-  // 必須チェック
   if (!$('conf_fish').value.trim() || !$('conf_size').value.trim()) {
     alert("魚種・サイズは必須です"); return;
   }
@@ -263,7 +248,7 @@ $('registerBtn').onclick = async () => {
   fd.append('tideHeight', $('conf_tideHeight').value);
   fd.append('trendText', $('conf_trendText').value);
   fd.append('highTide', $('conf_highTide').value);
-  fd.append('lowTide').value = $('conf_lowTide').value;
+  fd.append('lowTide', $('conf_lowTide').value);
   fd.append('memo', $('conf_memo').value);
   ['portLat','portLon','photoUrl','tideList'].forEach(k=>orig[k] && fd.append(k, orig[k]));
   $('overlayText').innerText = 'アップロード中...';
@@ -279,9 +264,8 @@ $('registerBtn').onclick = async () => {
   }
 };
 
-// 潮位再取得（場所の地点名で照合しなおし）★修正ポイント
-async function fetchTideAndUpdateConfirm() {
-  const placeName = $('conf_place').value;
+// ▼▼ マップで位置選択→緯度経度で潮位API照会
+async function fetchTideByLatLonAndUpdateConfirm(latlonStr) {
   $('overlayText').innerText = '潮位再取得中...';
   $('overlay').style.display = 'flex';
   try {
@@ -289,26 +273,54 @@ async function fetchTideAndUpdateConfirm() {
     fd.append('mode', 'preview');
     fd.append('species', $('conf_fish').value);
     fd.append('size', $('conf_size').value);
-    // ここで地点名（港名）を送信
-    fd.append('place', placeName);
+    fd.append('place', latlonStr);
     fd.append('date', $('conf_date').value);
     fd.append('time', $('conf_time').value);
     fd.append('memo', $('conf_memo').value);
-    // 写真は不要
     const res = await fetch(GAS_URL, { method:'POST', body: fd });
     const json = await res.json();
     $('overlay').style.display = 'none';
-    // 再反映
+    // 港名・潮位等反映
+    $('conf_place').value = json.harbor || json.place || "";
     $('conf_tideTitle').value = json.tideTitle || "";
     $('conf_tideHeight').value = json.tideHeight || "";
     $('conf_trendText').value = json.trendText || "";
     $('conf_highTide').value = json.highTide || "";
     $('conf_lowTide').value = json.lowTide || "";
-    // 港名（harbor）反映
-    $('conf_place').value = json.harbor || json.place || "";
     showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
     drawTideGraph(json.tideList || [], json.time);
-    // 反映
+    window.fishlogPreview = json;
+  } catch(e) {
+    $('overlay').style.display = 'none';
+    alert('潮位情報再取得エラー: ' + e);
+  }
+}
+
+// ▼▼ 場所欄の港名で潮位API照会
+async function fetchTideByPlaceNameAndUpdateConfirm() {
+  $('overlayText').innerText = '潮位再取得中...';
+  $('overlay').style.display = 'flex';
+  try {
+    const fd = new FormData();
+    fd.append('mode', 'preview');
+    fd.append('species', $('conf_fish').value);
+    fd.append('size', $('conf_size').value);
+    fd.append('place', $('conf_place').value); // 港名で送信
+    fd.append('date', $('conf_date').value);
+    fd.append('time', $('conf_time').value);
+    fd.append('memo', $('conf_memo').value);
+    const res = await fetch(GAS_URL, { method:'POST', body: fd });
+    const json = await res.json();
+    $('overlay').style.display = 'none';
+    // 港名・潮位等反映
+    $('conf_place').value = json.harbor || json.place || "";
+    $('conf_tideTitle').value = json.tideTitle || "";
+    $('conf_tideHeight').value = json.tideHeight || "";
+    $('conf_trendText').value = json.trendText || "";
+    $('conf_highTide').value = json.highTide || "";
+    $('conf_lowTide').value = json.lowTide || "";
+    showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
+    drawTideGraph(json.tideList || [], json.time);
     window.fishlogPreview = json;
   } catch(e) {
     $('overlay').style.display = 'none';
@@ -346,10 +358,8 @@ function drawTideGraph(tideList, catchTime){
     ctx.fillText("潮位データなし",40,60);
     return;
   }
-  // グラフスケール計算
   let min = Math.min(...tideList.map(t=>t.cm)), max = Math.max(...tideList.map(t=>t.cm));
   const h = cvs.height, w = cvs.width, padT=30, padB=24;
-  // グラフ線
   ctx.beginPath();
   tideList.forEach((d,i)=>{
     const x = i * (w-1)/(tideList.length-1);
@@ -358,7 +368,6 @@ function drawTideGraph(tideList, catchTime){
   });
   ctx.strokeStyle="#3380ef"; ctx.lineWidth=2.5; ctx.stroke();
 
-  // 4時間ごとの縦線
   ctx.save();
   ctx.strokeStyle="#bbbbbb";
   ctx.setLineDash([3, 7]);
@@ -375,7 +384,6 @@ function drawTideGraph(tideList, catchTime){
   }
   ctx.restore();
 
-  // 軸
   ctx.fillStyle="#357";
   ctx.font="13px sans-serif";
   ctx.fillText("0:00",2,h-8);
@@ -384,7 +392,6 @@ function drawTideGraph(tideList, catchTime){
   ctx.fillText(`${max}cm`,4,padT+8);
   ctx.fillText(`${min}cm`,4,h-padB+4);
 
-  // 釣果時刻マーク
   if(catchTime){
     const [hh, mm] = catchTime.split(':').map(Number);
     const sec = hh*3600 + mm*60;
