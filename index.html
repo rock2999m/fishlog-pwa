@@ -163,10 +163,6 @@ $('mapBtn1').onclick = ()=> {
 $('mapBtn2').onclick = ()=> {
   showMapModal($('conf_place').value, v=>{
     $('conf_place').value = v;
-    // 緯度経度の場合のみ潮位API再照合
-    if(v.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/)){
-      fetchTideAndUpdateConfirm();
-    }
   });
 };
 // 潮位再取得ボタン
@@ -221,9 +217,7 @@ $('nextBtn').onclick = async () => {
       $('conf_time').value = json.time || "";
       $('conf_fish').value = json.fish || "";
       $('conf_size').value = json.size || "";
-      // ------ ▼▼▼ 修正：港名のみ反映 ▼▼▼ ------
       $('conf_place').value = json.harbor || json.place || "";
-      // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
       $('conf_tideTitle').value = json.tideTitle || "";
       $('conf_tideHeight').value = json.tideHeight || "";
       $('conf_trendText').value = json.trendText || "";
@@ -264,14 +258,12 @@ $('registerBtn').onclick = async () => {
   fd.append('time', $('conf_time').value);
   fd.append('fish', $('conf_fish').value);
   fd.append('size', $('conf_size').value);
-  // ------ ▼▼▼ 修正：港名のみ送信 ▼▼▼ ------
   fd.append('place', $('conf_place').value);
-  // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
   fd.append('tideTitle', $('conf_tideTitle').value);
   fd.append('tideHeight', $('conf_tideHeight').value);
   fd.append('trendText', $('conf_trendText').value);
   fd.append('highTide', $('conf_highTide').value);
-  fd.append('lowTide', $('conf_lowTide').value);
+  fd.append('lowTide').value = $('conf_lowTide').value;
   fd.append('memo', $('conf_memo').value);
   ['portLat','portLon','photoUrl','tideList'].forEach(k=>orig[k] && fd.append(k, orig[k]));
   $('overlayText').innerText = 'アップロード中...';
@@ -287,12 +279,9 @@ $('registerBtn').onclick = async () => {
   }
 };
 
-// 潮位再取得（緯度経度で場所指定→照合しなおし）
+// 潮位再取得（場所の地点名で照合しなおし）★修正ポイント
 async function fetchTideAndUpdateConfirm() {
-  const latlon = $('conf_place').value;
-  if (!isLatLon(latlon)) {
-    alert('緯度経度の形式で場所を入力してください'); return;
-  }
+  const placeName = $('conf_place').value;
   $('overlayText').innerText = '潮位再取得中...';
   $('overlay').style.display = 'flex';
   try {
@@ -300,9 +289,8 @@ async function fetchTideAndUpdateConfirm() {
     fd.append('mode', 'preview');
     fd.append('species', $('conf_fish').value);
     fd.append('size', $('conf_size').value);
-    // ------ ▼▼▼ 修正：港名でなく緯度経度で送信（再取得の場合のみ） ▼▼▼ ------
-    fd.append('place', latlon);
-    // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
+    // ここで地点名（港名）を送信
+    fd.append('place', placeName);
     fd.append('date', $('conf_date').value);
     fd.append('time', $('conf_time').value);
     fd.append('memo', $('conf_memo').value);
@@ -316,9 +304,8 @@ async function fetchTideAndUpdateConfirm() {
     $('conf_trendText').value = json.trendText || "";
     $('conf_highTide').value = json.highTide || "";
     $('conf_lowTide').value = json.lowTide || "";
-    // ------ ▼▼▼ 修正：再取得後も港名を反映 ▼▼▼ ------
+    // 港名（harbor）反映
     $('conf_place').value = json.harbor || json.place || "";
-    // ------ ▲▲▲ 修正ここまで ▲▲▲ ------
     showGoogleMap(json.portLat, json.portLon, $('conf_place').value);
     drawTideGraph(json.tideList || [], json.time);
     // 反映
