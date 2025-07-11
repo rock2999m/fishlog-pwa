@@ -309,6 +309,15 @@ async function fetchTideByPlaceNameAndUpdateConfirm() {
     fd.append('date', $('conf_date').value);
     fd.append('time', $('conf_time').value);
     fd.append('memo', $('conf_memo').value);
+    console.log("潮位再取得 送信パラメータ", {
+     mode: 'preview',
+     species: $('conf_fish').value,
+     size: $('conf_size').value,
+     place: $('conf_place').value,
+     date: $('conf_date').value,
+     time: $('conf_time').value,
+     memo: $('conf_memo').value
+    });
     const res = await fetch(GAS_URL, { method:'POST', body: fd });
     const json = await res.json();
     $('overlay').style.display = 'none';
