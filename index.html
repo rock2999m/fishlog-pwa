@@ -4,31 +4,135 @@
   <meta charset="UTF-8">
   <title>釣果記録・登録フロー</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; background:#fafbfe;}
-    h2, h3 { margin-top: 0; }
-    .hidden { display:none; }
-    .row { margin-bottom: 0.8em; display:flex; align-items:center;}
-    label { display:inline-block; width:90px; }
-    input, select, textarea { font-size:1em; width:60%; }
-    input[type="file"] { width:100%; }
-    button { padding:0.7em 0; margin-left:8px; font-size:1em; border-radius:6px; border:none; background:#4887ef; color:#fff; width:85px;}
-    button:disabled { background: #c5defa; color:#333;}
-    #previewImg { max-width: 220px; border-radius:8px; }
-    .step { background: #fff; border-radius:10px; padding:2em 1.5em; box-shadow:0 2px 12px #0001;}
-    .field-label {font-size:0.93em;}
-    #overlay { display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(30,30,40,0.20); z-index:1000; justify-content:center; align-items:center; flex-direction:column; }
-    #overlayInner { background:rgba(255,255,255,0.95); border-radius: 16px; box-shadow: 0 2px 16px #0002; border: 2.5px solid #8bb2e6; min-width:220px; padding: 36px 36px 24px 36px; display:flex; flex-direction:column; align-items:center;}
-    .spinner { width: 52px; height: 52px; border: 7px solid #e1e8f6; border-top: 7px solid #3887ef; border-radius: 50%; animation: spin 1s linear infinite; margin:18px;}
+   <style>
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+      background: linear-gradient(120deg, #171f2c 0%, #263349 100%);
+      margin: 0; padding: 0;
+      min-height: 100vh;
+    }
+    .step {
+      background: #222b3a;
+      border-radius: 18px;
+      box-shadow: 0 4px 24px #11192780;
+      padding: 2.3em 1.8em 2em 1.8em;
+      max-width: 530px;
+      margin: 2.2em auto;
+    }
+    h2 {
+      margin-top: 0;
+      letter-spacing: .01em;
+      color: #3cb1fc;
+      font-weight: 700;
+      font-size: 1.45em;
+      text-shadow: 0 1px 0 #152236;
+    }
+    .row {
+      margin-bottom: 1.3em;
+      display: flex;
+      align-items: center;
+    }
+    label {
+      display: inline-block;
+      min-width: 95px;
+      color: #85bfff;
+      font-weight: 500;
+      font-size: 1.08em;
+      letter-spacing: .03em;
+    }
+    input, select, textarea {
+      font-size: 1.06em;
+      border: 1.5px solid #365987;
+      border-radius: 10px;
+      background: #172034;
+      color: #fff;
+      padding: 0.54em 0.95em;
+      transition: border-color .18s, background .15s;
+      width: 60%;
+      margin-right: 7px;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #3cb1fc;
+      background: #1e2a40;
+    }
+    input[type="file"] { width: 100%; border: none; background: none; color: #fff;}
+    button, #registerBtn, #nextBtn {
+      background: linear-gradient(90deg, #3cb1fc 0%, #2d4471 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.06em;
+      font-weight: 600;
+      padding: 0.82em 0;
+      min-width: 85px;
+      transition: background .15s, box-shadow .15s;
+      margin-left: 8px;
+      box-shadow: 0 1px 4px #1b2533b8;
+      cursor: pointer;
+    }
+    button:hover {
+      background: linear-gradient(90deg, #2e92e6 0%, #16213a 100%);
+    }
+    button:disabled {
+      background: #27436a !important; color: #aaa;
+      cursor: not-allowed;
+    }
+    .field-label {
+      color: #85bfff;
+      font-size: 1.02em;
+      min-width: 80px;
+    }
+    #previewImg {
+      max-width: 230px;
+      border-radius: 10px;
+      margin-bottom: 1em;
+      box-shadow: 0 2px 8px #223148;
+      background: #132035;
+    }
+    #map {
+      width: 100%; height: 180px; border-radius: 12px;
+      margin: 0.7em 0; border: 1.5px solid #315076;
+      background: #162138;
+    }
+    #tideGraph {
+      width: 100%; max-width: 380px; height: 140px; margin: 12px 0 0 0;
+      border: 1.5px solid #315076; border-radius: 10px;
+      background: #131b2a;
+      display: block;
+    }
+    /* オーバーレイ */
+    #overlay {
+      display: none; position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(18,24,34,0.34); z-index: 1000;
+      justify-content: center; align-items: center; flex-direction: column;
+    }
+    #overlayInner {
+      background: rgba(30,35,46,0.97);
+      border-radius: 18px;
+      box-shadow: 0 3px 24px #2e3c5090;
+      border: 2.5px solid #38517b;
+      min-width: 220px;
+      padding: 36px 36px 24px 36px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .spinner {
+      width: 52px; height: 52px; border: 7px solid #273955; border-top: 7px solid #3cb1fc;
+      border-radius: 50%; animation: spin 1s linear infinite; margin: 18px;
+    }
     @keyframes spin { 100% { transform: rotate(360deg);} }
-    #map { width:100%; height:180px; border-radius:12px; margin:0.7em 0; border:1.5px solid #d7e4fa; }
-    #tideGraph { width:100%; max-width:380px; height:140px; margin:10px 0 0 0; border:1.5px solid #d7e4fa; border-radius:10px;}
     /* モーダル */
-    #modalMapBg {display:none;position:fixed;z-index:2000;top:0;left:0;width:100vw;height:100vh;background:rgba(30,40,70,0.18);}
-    #modalMapInner {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:24px 20px 20px 20px;border-radius:14px;min-width:340px;}
-    #modalMapTitle {font-weight:bold;font-size:1.1em;margin-bottom:8px;}
-    #modalMapCanvas {width:320px;height:300px;border-radius:12px;border:1.2px solid #b6d1fa;}
+    #modalMapBg {display:none;position:fixed;z-index:2000;top:0;left:0;width:100vw;height:100vh;background:rgba(36,46,66,0.22);}
+    #modalMapInner {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#202c3e;padding:24px 20px 20px 20px;border-radius:16px;min-width:340px;}
+    #modalMapTitle {font-weight:600;font-size:1.1em;margin-bottom:8px;color:#6fcaff;}
+    #modalMapCanvas {width:320px;height:300px;border-radius:12px;border:1.2px solid #3cb1fc;}
     #modalMapBtns {text-align:right;margin-top:10px;}
+    /* 端末幅狭用 */
+    @media (max-width: 700px) {
+      .step { padding: 1.2em 0.3em; }
+      #modalMapInner { min-width:unset; width:96vw; }
+      #modalMapCanvas { width:98vw; min-width:200px; }
+    }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q"></script>
 </head>
