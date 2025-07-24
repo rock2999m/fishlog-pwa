@@ -187,16 +187,20 @@
   margin: 0;
   padding: 0;
   ">
-  <svg width="74" height="74" viewBox="0 0 28 28">
-    <!-- 四隅Finder -->
-    <polyline points="2,8 2,2 8,2" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
-    <polyline points="20,2 26,2 26,8" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
-    <polyline points="26,20 26,26 20,26" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
-    <polyline points="8,26 2,26 2,20" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
-    <!-- 中央十字 -->
-    <line x1="14" y1="9" x2="14" y2="19" stroke="#95cefa" stroke-width="2.7" stroke-linecap="round"/>
-    <line x1="9" y1="14" x2="19" y2="14" stroke="#95cefa" stroke-width="2.7" stroke-linecap="round"/>
-  </svg>
+ <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 角丸枠 -->
+  <rect x="10" y="10" width="100" height="100" rx="22" stroke="#fff" stroke-width="7" fill="none"/>
+  <!-- カメラ本体（大きく！） -->
+  <rect x="25" y="44" width="70" height="44" rx="14" fill="#fff"/>
+  <!-- カメラ上部出っ張り（大きく！） -->
+  <rect x="49" y="32" width="22" height="20" rx="8" fill="#fff"/>
+  <!-- レンズ外枠（そのまま） -->
+  <circle cx="60" cy="68" r="15" fill="none" stroke="#231815" stroke-width="7"/>
+  <!-- レンズ内側（そのまま） -->
+  <circle cx="60" cy="68" r="8" fill="#231815"/>
+  <!-- ハイライト -->
+  <circle cx="65" cy="63" r="2" fill="#fff"/>
+</svg>
   <input type="file" id="photo" accept="image/*" style="display:none;">
 </label>
     <img id="fileThumb" class="file-thumb" src="" alt="">
