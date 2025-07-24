@@ -56,7 +56,34 @@
       border-color: #3cb1fc;
       background: #1e2a40;
     }
-    input[type="file"] { width: 100%; border: none; background: none; color: #fff;}
+    input[type="file"] { display: none; }
+    /* ▼ 追加: ファイルボタンデザイン */
+    .file-label {
+      display: inline-block;
+      background: linear-gradient(90deg, #3cb1fc 0%, #2d4471 100%);
+      color: #fff;
+      padding: 0.7em 1.4em;
+      border-radius: 10px;
+      font-size: 1.06em;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 12px;
+      box-shadow: 0 1px 4px #1b2533b8;
+      transition: background .15s;
+      border: none;
+    }
+    .file-label:hover {
+      background: linear-gradient(90deg, #2e92e6 0%, #16213a 100%);
+    }
+    .file-thumb {
+      max-width: 86px;
+      max-height: 86px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px #223148;
+      background: #132035;
+      margin-left: 8px;
+      display: none;
+    }
     button, #registerBtn, #nextBtn {
       background: linear-gradient(90deg, #3cb1fc 0%, #2d4471 100%);
       color: #fff;
@@ -95,8 +122,7 @@
       margin: 0.7em 0; border: 1.5px solid #315076;
       background: #162138;
     }
-    .hidden { display: none;
-    }
+    .hidden { display: none; }
     #tideGraph {
       width: 100%; max-width: 380px; height: 140px; margin: 12px 0 0 0;
       border: 1.5px solid #315076; border-radius: 10px;
@@ -129,13 +155,16 @@
     #modalMapTitle {font-weight:600;font-size:1.1em;margin-bottom:8px;color:#6fcaff;}
     #modalMapCanvas {width:320px;height:300px;border-radius:12px;border:1.2px solid #3cb1fc;}
     #modalMapBtns {text-align:right;margin-top:10px;}
-    /* 端末幅狭用 */
     @media (max-width: 700px) {
       .step { padding: 1.2em 0.3em; }
       #modalMapInner { min-width:unset; width:96vw; }
       #modalMapCanvas { width:98vw; min-width:200px; }
     }
   </style>
+  <link rel="manifest" href="/fishlog-pwa/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/fishlog-pwa/icon-192.png">
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q"></script>
 </head>
 <body>
@@ -143,7 +172,35 @@
 <!-- Step1: 入力画面 -->
 <div class="step" id="step1">
   <h2>釣果記録 入力</h2>
-  <div class="row"><label>画像</label><input type="file" id="photo" accept="image/*"></div>
+  <div class="row">
+    <label>画像</label>
+    <input type="file" id="photo" accept="image/*" style="display:none;">
+    <label for="photo" style="
+  display:inline-flex;
+  align-items: center;
+  justify-content: center;
+  width:80px; height:80px;
+  background: linear-gradient(90deg, #6eb4fc 0%, #1b2840 100%);
+  border-radius: 12px;
+  box-shadow: 0 1px 6px #13234530;
+  cursor:pointer;
+  margin: 0;
+  padding: 0;
+  ">
+  <svg width="74" height="74" viewBox="0 0 28 28">
+    <!-- 四隅Finder -->
+    <polyline points="2,8 2,2 8,2" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
+    <polyline points="20,2 26,2 26,8" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
+    <polyline points="26,20 26,26 20,26" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
+    <polyline points="8,26 2,26 2,20" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
+    <!-- 中央十字 -->
+    <line x1="14" y1="9" x2="14" y2="19" stroke="#95cefa" stroke-width="2.7" stroke-linecap="round"/>
+    <line x1="9" y1="14" x2="19" y2="14" stroke="#95cefa" stroke-width="2.7" stroke-linecap="round"/>
+  </svg>
+  <input type="file" id="photo" accept="image/*" style="display:none;">
+</label>
+    <img id="fileThumb" class="file-thumb" src="" alt="">
+  </div>
   <div class="row"><label>魚種</label><input type="text" id="species" required></div>
   <div class="row"><label>サイズ</label><input type="number" id="size" required></div>
   <div class="row">
@@ -209,6 +266,26 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbz2RfXLNSJA5MwmNMWoy-K4
 const GOOGLE_MAPS_API_KEY = "AIzaSyBjf_woLlnqkPXrvUe2b8hGQbGj3hlfV2Q";
 const $ = id => document.getElementById(id);
 
+// ▼ ファイル選択でサムネイル即時表示
+$('photo').addEventListener('change', function(e){
+  const file = this.files[0];
+  const thumb = $('fileThumb');
+  const fileLabel = $('fileLabel');
+  if(file && file.type.startsWith('image/')){
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      thumb.src = e.target.result;
+      thumb.style.display = "inline-block";
+    };
+    reader.readAsDataURL(file);
+    fileLabel.textContent = "画像変更";
+  } else {
+    thumb.style.display = "none";
+    thumb.src = "";
+    fileLabel.textContent = "写真を選択";
+  }
+});
+
 let mapPicker, pickedLatLng = null, mapPickerMarker = null, mapPickerOnUpdate;
 
 function showMapModal(currentVal, onUpdate) {
@@ -235,7 +312,7 @@ function showMapModal(currentVal, onUpdate) {
       mapPickerMarker.setPosition(e.latLng);
     });
     pickedLatLng = {lat, lng};
-    mapPickerMarker.addListener('position_changed', function(){
+    mapPickerMarker.addEventListener('position_changed', function(){
       pickedLatLng = {lat: mapPickerMarker.getPosition().lat(), lng: mapPickerMarker.getPosition().lng()};
     });
   }, 100);
